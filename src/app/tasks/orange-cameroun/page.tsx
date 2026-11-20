@@ -132,17 +132,27 @@ export default function OrangeCamerounPage() {
   };
 
   const toggleRow = (rowNumber: number) => {
-    setSelected((prev) => {
-      if (prev.includes(rowNumber)) return prev.filter((r) => r !== rowNumber);
-      if (prev.length >= MAX_SELECTION) {
-        setNotice({
-          type: "info",
-          text: `You can include at most ${MAX_SELECTION} transactions in one PDF.`,
-        });
-        return prev;
-      }
-      return [...prev, rowNumber];
-    });
+    let next: number[];
+    if (selected.includes(rowNumber)) {
+      next = selected.filter((r) => r !== rowNumber);
+    } else if (selected.length >= MAX_SELECTION) {
+      setNotice({
+        type: "info",
+        text: `You can include at most ${MAX_SELECTION} transactions in one PDF.`,
+      });
+      return;
+    } else {
+      next = [...selected, rowNumber];
+    }
+    setSelected(next);
+
+    // Pre-fill the customer name from a remembered match.
+    if (next.length === 1 && !customerName) {
+      const known = result?.transactions.find(
+        (t) => t.rowNumber === next[0],
+      )?.knownCustomerName;
+      if (known) setCustomerName(known);
+    }
   };
 
   const selectedTransactions = useMemo(() => {
@@ -151,14 +161,6 @@ export default function OrangeCamerounPage() {
       .map((rn) => result.transactions.find((t) => t.rowNumber === rn))
       .filter((t): t is NonNullable<typeof t> => Boolean(t));
   }, [selected, result]);
-
-  // Pre-fill the customer name from a remembered match.
-  useEffect(() => {
-    if (selectedTransactions.length === 1 && !customerName) {
-      const known = selectedTransactions[0].knownCustomerName;
-      if (known) setCustomerName(known);
-    }
-  }, [selectedTransactions, customerName]);
 
   const filteredTransactions = useMemo(() => {
     if (!result) return [];
